@@ -1,0 +1,189 @@
+package model;
+
+import java.sql.Date;
+
+public class StudentModel implements Comparable<StudentModel> {
+	private int clientID;
+	private String githubName, currentClass, registerClass, currentModule, currentLevel, staffSinceDate;
+	private int homeLocation, gender, gradYear, staffPastEvents;
+	private Double age;
+	private Date startDate, lastVisitDate;
+	private StudentNameModel nameModel;
+	private boolean missingData;
+	private String email, acctMgrEmail, emergEmail, phone, acctMgrPhone, homePhone, emergPhone;
+
+	public StudentModel(int clientID, StudentNameModel nameModel, Double age, String githubName, int gender,
+			Date startDate, int homeLocation, int gradYear, String currClass, String email, String acctMgrEmail,
+			String emergEmail, String phone, String acctMgrPhone, String homePhone, String emergPhone,
+			String currModule, String currLevel, String registerClass, Date lastVisitDate) {
+		this.clientID = clientID;
+		this.nameModel = nameModel;
+		this.age = age;
+		this.githubName = githubName;
+		this.homeLocation = homeLocation;
+		this.gender = gender;
+		this.gradYear = gradYear;
+		this.startDate = startDate;
+		this.currentClass = currClass;
+		this.currentModule = currModule;
+		this.currentLevel = currLevel;
+		this.registerClass = registerClass;
+		this.lastVisitDate = lastVisitDate;
+
+		this.email = email;
+		this.acctMgrEmail = acctMgrEmail;
+		this.emergEmail = emergEmail;
+		this.phone = phone;
+		this.acctMgrPhone = acctMgrPhone;
+		this.homePhone = homePhone;
+		this.emergPhone = emergPhone;
+
+		if (nameModel.getIsInMasterDb()
+				&& (homeLocation == LocationModel.CLASS_LOCATION_UNKNOWN || gender == GenderModel.getGenderUnknown()
+						|| gradYear == 0 || githubName == null || githubName.equals("") || age == 0))
+			missingData = true;
+		else
+			missingData = false;
+	}
+
+	public StudentModel(int clientID, StudentNameModel nameModel, Double age, String currClass, String currLevel,
+			String staffSinceDate, int staffPastEvents, String email, String phone) {
+		// Student model for student TA's
+		this.clientID = clientID;
+		this.nameModel = nameModel;
+		this.age = age;
+		this.currentClass = currClass;
+		this.currentLevel = currLevel;
+		this.staffSinceDate = staffSinceDate;
+		this.staffPastEvents = staffPastEvents;
+		this.email = email;
+		this.phone = phone;
+	}
+	
+	public StudentModel(int clientID, String currLevel, String currModule) {
+		// Student model for updating current module
+		this.clientID = clientID;
+		this.currentLevel = currLevel;
+		this.currentModule = currModule;
+	}
+
+	public String toString() {
+		return nameModel.toString() + " (" + clientID + ")";
+	}
+
+	public boolean isMissingData() {
+		return missingData;
+	}
+
+	public int getClientID() {
+		return clientID;
+	}
+
+	public int getGender() {
+		return gender;
+	}
+
+	public Date getStartDate() {
+		return startDate;
+	}
+
+	public Date getLastVisitDate() {
+		return lastVisitDate;
+	}
+
+	public String getLastVisitDateString() {
+		if (lastVisitDate == null)
+			return "";
+		else
+			return lastVisitDate.toString();
+	}
+
+	public int getGradYear() {
+		return gradYear;
+	}
+
+	public String getLastName() {
+		return nameModel.getLastName();
+	}
+
+	public String getFirstName() {
+		return nameModel.getFirstName();
+	}
+
+	public StudentNameModel getNameModel() {
+		return nameModel;
+	}
+
+	public String getGithubName() {
+		return githubName;
+	}
+
+	public int getHomeLocation() {
+		return homeLocation;
+	}
+
+	public String getCurrentClass() {
+		return currentClass;
+	}
+
+	public String getCurrentModule() {
+		return currentModule;
+	}
+
+	public String getCurrentLevel() {
+		return currentLevel;
+	}
+
+	public String getRegisterClass() {
+		return registerClass;
+	}
+
+	public String getEmail() {
+		return email;
+	}
+
+	public String getAcctMgrEmail() {
+		return acctMgrEmail;
+	}
+
+	public String getEmergEmail() {
+		return emergEmail;
+	}
+
+	public String getPhone() {
+		return phone;
+	}
+
+	public String getAcctMgrPhone() {
+		return acctMgrPhone;
+	}
+
+	public String getHomePhone() {
+		return homePhone;
+	}
+
+	public String getEmergPhone() {
+		return emergPhone;
+	}
+
+	public Double getAge() {
+		return age;
+	}
+
+	public String getStaffSinceDate() {
+		return staffSinceDate;
+	}
+
+	public int getStaffPastEvents() {
+		return staffPastEvents;
+	}
+
+	@Override
+	public int compareTo(StudentModel otherName) {
+		int comp = this.getLastName().compareTo(otherName.getLastName());
+		if (comp == 0)
+			return (this.getFirstName().compareTo(otherName.getFirstName()));
+		else
+			return comp;
+	}
+}
