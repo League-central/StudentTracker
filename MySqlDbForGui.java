@@ -624,7 +624,7 @@ public class MySqlDbForGui {
 				// Get schedule data for weekly classes
 				PreparedStatement selectStmt = sqlDb.dbConnection.prepareStatement(
 						"SELECT * FROM Schedule WHERE ((LEFT(ClassName,1) >= '0' AND LEFT(ClassName,1) <= '7') "
-								+ "OR LEFT(ClassName,2) = 'AD' OR LEFT(ClassName,2) = 'AG' OR LEFT(ClassName,2) = 'PG') "
+								+ "OR LEFT(ClassName,2) = 'AD' OR LEFT(ClassName,2) = 'AG' OR LEFT(ClassName,2) = 'PG' OR LEFT(ClassName,4) = 'Java') "
 								+ dowSelect + "ORDER BY DayOfWeek, StartTime, ClassName;");
 				ResultSet result = selectStmt.executeQuery();
 
@@ -635,7 +635,7 @@ public class MySqlDbForGui {
 							result.getString("StartTime"), result.getInt("Duration"), result.getString("ClassName"));
 					sched.setMiscSchedFields(result.getInt("NumStudents"), result.getString("Youngest"),
 							result.getString("Oldest"), result.getString("AverageAge"),
-							result.getString("ModuleCount"));
+							result.getString("ModuleCount"), result.getString("Room"), result.getBoolean("RoomMismatch"));
 					eventList.add(sched);
 				}
 				System.out.println("Total # classes: " + totalCount);
