@@ -227,7 +227,7 @@ public class MySqlDbForGui {
 				// If Database no longer connected, the exception code will re-connect
 				PreparedStatement selectStmt = sqlDb.dbConnection.prepareStatement(
 						"SELECT * FROM Attendance, Students WHERE isInMasterDb AND Attendance.ClientID = Students.ClientID "
-								+ "AND State = 'completed' AND ServiceDate > ?  "
+								+ "AND State = 'completed' AND ServiceDate > ? AND (EventName LIKE 'Java@%' OR EventName LIKE '%Make-Up%') "
 								+ "ORDER BY Attendance.ClientID, ServiceDate ASC, EventName;");
 				selectStmt.setString(1, sinceDate);
 
@@ -259,19 +259,18 @@ public class MySqlDbForGui {
 					if (!ignore && (comments == null || comments.equals(""))) {
 						// No github comments for this client either previously or now
 						String eventName = result.getString("EventName");
-						String classLevel = result.getString("ClassLevel");
+						String currLevel = result.getString("CurrentLevel");
 						count++;
 
-						// Process if student is in levels 0 - 4
-						if ((eventName.charAt(0) >= '0' && eventName.charAt(0) <= '5') || (!classLevel.equals("")
-								&& classLevel.charAt(0) >= '0' && classLevel.charAt(0) <= '5')) {
+						// Process if student is in levels 0 - 5
+						if (!currLevel.equals("") && currLevel.charAt(0) >= '0' && currLevel.charAt(0) <= '5') {
 							// Save this record for possible addition to list
 							DateTime serviceDate = new DateTime(result.getDate("ServiceDate"));
 							int dowInt = serviceDate.getDayOfWeek();
 							if (dowInt > 6)
 								dowInt -= 7;
 							lastGithubModel = new GithubModel(thisClientID,
-									result.getString("FirstName") + " " + result.getString("LastName"),
+									result.getString("FirstName") + " " + result.getString("LastName"), currLevel,
 									serviceDate.toString("EEEEE"), dowInt, eventName, result.getString("GithubName"),
 									result.getString("TeacherNames"));
 						}
@@ -314,7 +313,7 @@ public class MySqlDbForGui {
 				// Get 1st 4 attendance records for each client; use sorted attendance table
 				PreparedStatement selectStmt = sqlDb.dbConnection.prepareStatement("SELECT * "
 						+ "FROM (SELECT Students.ClientID as StudID, ServiceDate, ServiceTime, EventName, VisitID, "
-						+ "         ServiceCategory, State, LastSFState, FirstName, LastName, isInMasterDb, "
+						+ "         ServiceCategory, State, LastSFState, FirstName, LastName, CurrentLevel, isInMasterDb, "
 						+ "         GithubName, Birthdate, RepoName, Comments, TeacherNames, ClassLevel, "
 						+ "         @num := IF(@lastId = Students.ClientID, @num + 1, if (@lastId := Students.ClientId, 1, 1)) as row "
 						+ "      FROM SortedAttendance, Students "
@@ -346,7 +345,7 @@ public class MySqlDbForGui {
 		return attendanceList;
 	}
 
-	public ArrayList<AttendanceModel> getAttendanceByClassName(String className) {
+	public ArrayList<AttendanceModel> getAttendanceByClassName(String className, boolean sinceDateEna) {
 		ArrayList<AttendanceModel> attendanceList = new ArrayList<AttendanceModel>();
 		ArrayList<AttendanceModel> listByClient;
 		DateTime today = new DateTime().withZone(DateTimeZone.forID("America/Los_Angeles"));
@@ -356,13 +355,22 @@ public class MySqlDbForGui {
 		for (int i = 0; i < 2; i++) {
 			try {
 				// If Database no longer connected, the exception code will re-connect
-				PreparedStatement selectStmt = sqlDb.dbConnection.prepareStatement(
+				PreparedStatement selectStmt;
+				if (sinceDateEna) {
+					selectStmt = sqlDb.dbConnection.prepareStatement(
 						"SELECT * FROM Attendance, Students WHERE isInMasterDb AND Attendance.ClientID = Students.ClientID "
 								+ "AND ((State = 'completed' AND EventName = CurrentClass) OR State = 'registered') "
 								+ "AND EventName=? AND ServiceDate > ? AND ServiceDate < ? GROUP BY Students.ClientID;");
-				selectStmt.setString(1, className);
-				selectStmt.setString(2, sinceDate);
-				selectStmt.setString(3, endDate);
+					selectStmt.setString(1, className);
+					selectStmt.setString(2, sinceDate);
+					selectStmt.setString(3, endDate);
+				}
+				else {
+					selectStmt = sqlDb.dbConnection.prepareStatement(
+						"SELECT * FROM Attendance, Students WHERE isInMasterDb AND Attendance.ClientID = Students.ClientID "
+								+ "AND State = 'completed' AND EventName=? GROUP BY Students.ClientID;");
+					selectStmt.setString(1, className);
+				}
 
 				ResultSet result = selectStmt.executeQuery();
 				while (result.next()) {
@@ -400,15 +408,15 @@ public class MySqlDbForGui {
 		for (int i = 0; i < 2; i++) {
 			// If Database no longer connected, the exception code will re-connect
 			try {
-				// Get attendance by class and by date
+				// Get attendance by class and by date; class name in database can have added fields, so
+				//    just make sure that at least the base name is matched.
 				PreparedStatement selectStmt = sqlDb.dbConnection.prepareStatement(
 						"SELECT Students.ClientID, Students.FirstName, Students.LastName, Attendance.State, "
 								+ "Attendance.ServiceCategory FROM Attendance, Students "
 								+ "WHERE isInMasterDb AND Attendance.ClientID = Students.ClientID "
-								+ "AND (State = 'completed' OR State = 'registered') AND EventName=? "
+								+ "AND (State = 'completed' OR State = 'registered') AND EventName LIKE '" + className + "%' "
 								+ "AND ServiceDate=? GROUP BY Students.ClientID;");
-				selectStmt.setString(1, className);
-				selectStmt.setString(2, date);
+				selectStmt.setString(1, date);
 
 				ResultSet result = selectStmt.executeQuery();
 				while (result.next()) {
@@ -449,7 +457,7 @@ public class MySqlDbForGui {
 				// If Database no longer connected, the exception code will re-connect
 				PreparedStatement selectStmt = sqlDb.dbConnection
 						.prepareStatement("SELECT Students.ClientID, FirstName, LastName, GithubName, State, "
-								+ "LastSFState, ServiceCategory, TeacherNames, Birthdate, ClassLevel "
+								+ "CurrentLevel, LastSFState, ServiceCategory, TeacherNames, Birthdate, ClassLevel "
 								+ "FROM Attendance, Students "
 								+ "WHERE isInMasterDb AND Attendance.ClientID = Students.ClientID "
 								+ "AND (State = 'completed' OR State = 'registered') AND EventName=? "
@@ -465,7 +473,7 @@ public class MySqlDbForGui {
 					listByClient = getAttendanceByClientID(thisClientID.toString());
 					if (listByClient.size() == 0)
 						attendanceList.add(new AttendanceModel(thisClientID, name,
-								sqlDb.getAge(today, result.getString("Birthdate")), result.getString("GithubName"),
+								sqlDb.getAge(today, result.getString("Birthdate")), result.getString("CurrentLevel"), result.getString("GithubName"),
 								new AttendanceEventModel(thisClientID, 0, null, "   ", "",
 										result.getString("GithubName"), "", "", null, name,
 										result.getString("ServiceCategory"), result.getString("State"),
@@ -473,6 +481,57 @@ public class MySqlDbForGui {
 										result.getString("ClassLevel"))));
 					else
 						attendanceList.addAll(listByClient);
+				}
+				Collections.sort(attendanceList);
+
+				result.close();
+				selectStmt.close();
+				break;
+
+			} catch (CommunicationsException | MySQLNonTransientConnectionException | NullPointerException e1) {
+				if (i == 0) {
+					// First attempt to re-connect
+					sqlDb.connectDatabase();
+				} else
+					sqlDb.setConnectError(true);
+
+			} catch (SQLException e2) {
+				MySqlDbLogging.insertLogData(LogDataModel.ATTENDANCE_DB_ERROR, new StudentNameModel("", "", false), 0,
+						": " + e2.getMessage());
+				break;
+			}
+		}
+		return attendanceList;
+	}
+
+	public ArrayList<AttendanceModel> getAttendanceByCourseByDate(String courseName, String date) {
+		// Special case of getAttendanceByCourseName, selected for specific day
+		ArrayList<AttendanceModel> attendanceList = new ArrayList<AttendanceModel>();
+		ArrayList<AttendanceModel> listByClient;
+		
+		if (courseName.contains("WShop"))
+			courseName = courseName.replace("WShop", "Workshop");
+
+		for (int i = 0; i < 2; i++) {
+			// If Database no longer connected, the exception code will re-connect
+			try {
+				// Get attendance by course and by date; class name in database can have added fields, so
+				//    just make sure that at least the base name is matched.
+				PreparedStatement selectStmt = sqlDb.dbConnection.prepareStatement(
+						"SELECT Students.ClientID, Students.FirstName, Students.LastName, GithubName, Attendance.State, "
+								+ "CurrentLevel, LastSFState, ServiceCategory, TeacherNames, Birthdate, ClassLevel "
+								+ "FROM Attendance, Students "
+								+ "WHERE isInMasterDb AND Attendance.ClientID = Students.ClientID "
+								+ "AND (State = 'completed' OR State = 'registered') AND EventName LIKE '" + courseName + "%' "
+								+ "AND ServiceDate=? GROUP BY Students.ClientID;");
+				selectStmt.setString(1, date);
+
+				ResultSet result = selectStmt.executeQuery();
+				while (result.next()) {
+					// Get attendance for each student in this particular make-up class
+					Integer thisClientID = result.getInt("Students.ClientID");
+					listByClient = getAttendanceByClientID(thisClientID.toString());
+					attendanceList.addAll(listByClient);
 				}
 				Collections.sort(attendanceList);
 
@@ -504,7 +563,7 @@ public class MySqlDbForGui {
 				// If Database no longer connected, the exception code will re-connect
 				PreparedStatement selectStmt = sqlDb.dbConnection.prepareStatement(
 						"SELECT * FROM Attendance, Students WHERE Attendance.ClientID = Students.ClientID AND State = 'completed' "
-								+ "AND Attendance.ClientID=? ORDER BY Attendance.ClientID, ServiceDate DESC, EventName LIMIT 52;");
+								+ "AND Attendance.ClientID=? ORDER BY Attendance.ClientID, ServiceDate DESC, EventName LIMIT 500;");
 				selectStmt.setInt(1, Integer.parseInt(clientID));
 
 				ResultSet result = selectStmt.executeQuery();
@@ -576,7 +635,7 @@ public class MySqlDbForGui {
 					lastAttendanceModel = new AttendanceModel(thisClientID,
 							new StudentNameModel(result.getString("FirstName"), result.getString("LastName"),
 									result.getBoolean("isInMasterDb")),
-							sqlDb.getAge(today, result.getString("Birthdate")), result.getString("GithubName"),
+							sqlDb.getAge(today, result.getString("Birthdate")), result.getString("CurrentLevel"), result.getString("GithubName"),
 							new AttendanceEventModel(thisClientID, result.getInt("VisitID"),
 									result.getDate("ServiceDate"), result.getString("ServiceTime"),
 									result.getString("EventName"), result.getString("GithubName"),
@@ -623,8 +682,7 @@ public class MySqlDbForGui {
 			try {
 				// Get schedule data for weekly classes
 				PreparedStatement selectStmt = sqlDb.dbConnection.prepareStatement(
-						"SELECT * FROM Schedule WHERE ((LEFT(ClassName,1) >= '0' AND LEFT(ClassName,1) <= '7') "
-								+ "OR LEFT(ClassName,2) = 'AD' OR LEFT(ClassName,2) = 'AG' OR LEFT(ClassName,2) = 'PG' OR LEFT(ClassName,4) = 'Java') "
+						"SELECT * FROM Schedule WHERE (LEFT(ClassName,4) = 'Java') "
 								+ dowSelect + "ORDER BY DayOfWeek, StartTime, ClassName;");
 				ResultSet result = selectStmt.executeQuery();
 

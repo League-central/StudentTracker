@@ -50,11 +50,11 @@ public class StudentTableModel extends AbstractTableModel {
 
 	// Table column names for each table type
 	private final String colStdNames[] = { " ID ", " Student Name ", " G ", " Age ", " Github ", " Home Loc ",
-			" Grad Yr ", " Start Date ", " Last Visit", " Last Class (0 - 7) " };
+			" Grad Yr ", " Start Date ", " Last Visit", " Last Class " };
 	private final String colEmailNames[] = { " ID ", " Student Name ", " Student Email ", " Acct Mgr Email ",
-			" Emerg Email ", " Last Class Visit (0 - 7) " };
+			" Emerg Email ", " Last Class Visit " };
 	private final String colPhoneNames[] = { " ID ", " Student Name ", " Student Phone ", " Acct Mgr Phone ",
-			" Home Phone ", " Emerg Phone ", " Last Class Visit (0 - 7) " };
+			" Home Phone ", " Emerg Phone ", " Last Class Visit " };
 	private final String colTANames[] = { " ID ", " Student Name ", " TA Start Date ", " # Classes ", " Curr Age ",
 			" Curr Level ", " Student Email ", " Student Phone " };
 
@@ -126,7 +126,7 @@ public class StudentTableModel extends AbstractTableModel {
 			case CLIENT_ID_COLUMN:
 				return String.valueOf(student.getClientID());
 			case STUDENT_NAME_COLUMN:
-				return student.getNameModel();
+				return getStudentNameWithLevel(student);
 			case GENDER_COLUMN:
 				return GenderModel.convertGenderToString(student.getGender());
 			case AGE_COLUMN:
@@ -161,7 +161,7 @@ public class StudentTableModel extends AbstractTableModel {
 			case CLIENT_ID_COLUMN:
 				return String.valueOf(student.getClientID());
 			case STUDENT_NAME_COLUMN:
-				return student.getNameModel();
+				return getStudentNameWithLevel(student);
 			case STUDENT_EMAIL_COLUMN:
 				return student.getEmail();
 			case ACCT_MGR_EMAIL_COLUMN:
@@ -176,7 +176,7 @@ public class StudentTableModel extends AbstractTableModel {
 			case CLIENT_ID_COLUMN:
 				return String.valueOf(student.getClientID());
 			case STUDENT_NAME_COLUMN:
-				return student.getNameModel();
+				return getStudentNameWithLevel(student);
 			case STUDENT_PHONE_COLUMN:
 				return student.getPhone();
 			case ACCT_MGR_PHONE_COLUMN:
@@ -193,7 +193,7 @@ public class StudentTableModel extends AbstractTableModel {
 			case CLIENT_ID_COLUMN:
 				return String.valueOf(student.getClientID());
 			case STUDENT_NAME_COLUMN:
-				return student.getNameModel();
+				return getStudentNameWithLevel(student);
 			case TA_SINCE_COLUMN:
 				return student.getStaffSinceDate();
 			case TA_PAST_EVENTS:
@@ -214,14 +214,21 @@ public class StudentTableModel extends AbstractTableModel {
 		return null;
 	}
 
+	private StudentNameModel getStudentNameWithLevel (StudentModel student) {
+		if (student.getCurrentLevel() != null && !student.getCurrentLevel().equals("")) {
+			return new StudentNameModel(student.getNameModel().getFirstName(), 
+					                    student.getNameModel().getLastName() + " [" + student.getCurrentLevel() + "]", 
+					                    student.getNameModel().getIsInMasterDb());
+		}
+		else
+			return student.getNameModel();
+	}
+	
 	private String getCurrentClassString(StudentModel student) {
 		if (student.getCurrentClass() == null || student.getCurrentClass().equals(""))
 			return "";
-		else if ((student.getCurrentClass().charAt(0) >= '0' && student.getCurrentClass().charAt(0) <= '7')
-				|| student.getCurrentClass().startsWith("AD") || student.getCurrentClass().startsWith("AG")
-				|| student.getCurrentClass().startsWith("PG") || student.getCurrentClass().startsWith("Java@")
-				|| student.getCurrentClass().startsWith("LOA"))
-			return student.getCurrentClass() + " [" + student.getCurrentLevel() + "]";
+		else if (student.getCurrentClass().startsWith("Java@") || student.getCurrentClass().startsWith("LOA"))
+			return student.getCurrentClass();
 		else
 			return student.getCurrentLevel();
 	}
