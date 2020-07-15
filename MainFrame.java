@@ -501,11 +501,12 @@ public class MainFrame {
 				if (className.toLowerCase().contains("make-up") || className.startsWith("L@")) {
 					refreshAttendanceTable(ATTEND_TABLE_BY_CLASS_AND_DATE, "", className, classDate,
 							" for '" + className + "' on " + classDate, false, true);
-				} else if (className.contains("Intro to Java") || className.toLowerCase().contains("slam")) {
+				} else if (className.toLowerCase().contains("intro to java") || className.toLowerCase().contains("slam") 
+						|| className.toLowerCase().contains("coding camp")) {
 					refreshAttendanceTable(ATTEND_TABLE_BY_COURSE_AND_DATE, "", className, classDate,
 							" for '" + className + "' on " + classDate, false, true);
 				} else
-					refreshAttendanceTable(ATTEND_TABLE_BY_CLASS_NAME, "", className, "", " for '" + className + "'",
+					refreshAttendanceTable(ATTEND_TABLE_BY_CLASS_NAME, "", className, "", " for '" + className + "'" + controller.getClassDowAndTime(className),
 							sinceDateEna, true);
 			}
 
@@ -611,9 +612,9 @@ public class MainFrame {
 			headerLabel.setText(STUDENT_TITLE + " (" + studentTable.getTableRowCount() + " Students)");
 
 		} else if (tableType == STUDENT_TABLE_NOT_IN_MASTER_DB) {
-			headerLabel.setText(STUDENTS_NOT_IN_MASTER_TITLE);
 			studentTable.setData(tablePanel, controller.getStudentsNotInMasterDB(),
 					StudentTable.STANDARD_STUDENT_TABLE_TYPE, clearSearch);
+			headerLabel.setText(STUDENTS_NOT_IN_MASTER_TITLE + " (" + studentTable.getTableRowCount() + " Students)");
 
 		} else if (tableType == STUDENT_TABLE_BY_STUDENT) {
 			ArrayList<StudentModel> students = controller.getStudentByClientID(clientID);
@@ -836,9 +837,9 @@ public class MainFrame {
 		// Add github data and header
 		String sinceDate = new DateTime().withZone(DateTimeZone.forID("America/Los_Angeles"))
 				.minusDays(NO_RECENT_GITHUB_SINCE_DAYS).toString("yyyy-MM-dd");
-		headerLabel.setText(GITHUB_TITLE + sinceDate + " (Levels 0 - 5)");
 		githubTable.setData(tablePanel,
 				controller.getStudentsWithNoRecentGithub(sinceDate, MIN_CLASSES_WITH_NO_GITHUB));
+		headerLabel.setText(githubTable.getTableRowCount() + " " + GITHUB_TITLE + sinceDate + " (Levels 0 - 5)");
 
 		if (newTable) {
 			if (currTable.getTableType() != TableHistoryModel.GITHUB_TABLE) {
